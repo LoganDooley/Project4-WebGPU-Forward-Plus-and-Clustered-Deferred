@@ -18,6 +18,7 @@
 // Temporary debug
 @group(${bindGroup_scene}) @binding(0) var<uniform> cameraUniforms: CameraUniforms;
 @group(${bindGroup_scene}) @binding(1) var<storage, read> lightSet: LightSet;
+@group(${bindGroup_scene}) @binding(2) var<storage, read> clusterSet: ClusterSet;
 
 @group(${bindGroup_material}) @binding(0) var diffuseTex: texture_2d<f32>;
 @group(${bindGroup_material}) @binding(1) var diffuseTexSampler: sampler;
@@ -72,9 +73,20 @@ fn main(in: FragmentInput) -> @location(0) vec4f
     let cx = u32(clamp(xSlice, 0.0, f32(${clusterCountX} - 1)));
     let cy = u32(clamp(ySlice, 0.0, f32(${clusterCountY} - 1)));
     let cz = u32(clamp(zSlice, 0.0, f32(${clusterCountZ} - 1)));
+    /*
     return vec4f(
         f32(cx) / f32(${clusterCountX}), 
         f32(cy) / f32(${clusterCountY}), 
         f32(cz) / f32(${clusterCountZ}),
         1);
+    */
+    let clusterIdx = cx + cy * ${clusterCountX} + cz * ${clusterCountX} * ${clusterCountY};
+    let lightCount = clusterSet.clusters[clusterIdx].numLights;
+
+    return vec4f(
+        f32(lightCount) / f32(${maxLightsPerCluster}),
+        f32(lightCount) / f32(${maxLightsPerCluster}),
+        f32(lightCount) / f32(${maxLightsPerCluster}),
+        1
+    );
 }

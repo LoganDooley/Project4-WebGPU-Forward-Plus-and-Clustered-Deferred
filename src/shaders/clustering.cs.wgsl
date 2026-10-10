@@ -21,3 +21,24 @@
 //         - Stop adding lights if the maximum number of lights is reached.
 
 //     - Store the number of lights assigned to this cluster.
+
+@group(0) @binding(0) var<uniform> cameraUniforms: CameraUniforms;
+@group(0) @binding(1) var<storage, read> lightSet: LightSet;
+@group(0) @binding(2) var<storage, read_write> clusterSet: ClusterSet;
+
+@compute @workgroup_size(${clusterWorkgroupSize}, ${clusterWorkgroupSize}, ${clusterWorkgroupSize})
+fn main(@builtin(global_invocation_id) id: vec3u) {
+    if(id.x >= ${clusterCountX} || id.y >= ${clusterCountY} || id.z >= ${clusterCountZ}){
+        return;
+    }
+
+    let clusterIdx = id.x + id.y * ${clusterCountX} + id.z * ${clusterCountX} * ${clusterCountY};
+
+    let lightCount = min(lightSet.numLights, ${maxLightsPerCluster});
+    
+    // For now put every light in every cluster
+    clusterSet.clusters[clusterIdx].numLights = lightCount;
+    for (var i = 0u; i < lightCount; i++){
+        clusterSet.clusters[clusterIdx].lightIndices[i] = i;
+    }
+}
