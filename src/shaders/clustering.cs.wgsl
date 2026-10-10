@@ -34,11 +34,25 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
 
     let clusterIdx = id.x + id.y * ${clusterCountX} + id.z * ${clusterCountX} * ${clusterCountY};
 
-    let lightCount = min(lightSet.numLights, ${maxLightsPerCluster});
-    
-    // For now put every light in every cluster
-    clusterSet.clusters[clusterIdx].numLights = lightCount;
-    for (var i = 0u; i < lightCount; i++){
-        clusterSet.clusters[clusterIdx].lightIndices[i] = i;
+    // Compute this cluster's Z bounds. From https://www.aortiz.me/2018/12/21/CG.html#part-2
+    let farOverNear = cameraUniforms.far / cameraUniforms.near;
+    let depthNear = cameraUniforms.near * pow(farOverNear, f32(id.z) / f32(${clusterCountZ}));
+    let depthFar = cameraUniforms.near * pow(farOverNear, f32(id.z + 1) / f32(${clusterCountZ}));
+
+
+    // For now put lights in clusters just based on Z
+    var clusterNumLights = 0u;
+    for (var i = 0u; i < lightSet.numLights && clusterNumLights < ${maxLightsPerCluster}; i++){
+        let light = lightSet.lights[i];
+        let lightViewPos = cameraUniforms.viewMat * vec4(light.pos, 1);
+        let lightViewZ = -lightViewPos.z;
+
+        if (lightViewZ + ${lightRadius} < depthNear || lightViewZ - ${lightRadius} > depthFar){
+            continue;
+        }
+
+        clusterSet.clusters[clusterIdx].lightIndices[clusterNumLights] = i;
+        clusterNumLights++;
     }
+    clusterSet.clusters[clusterIdx].numLights = clusterNumLights;
 }
