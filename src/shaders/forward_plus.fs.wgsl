@@ -81,12 +81,21 @@ fn main(in: FragmentInput) -> @location(0) vec4f
         1);
     */
     let clusterIdx = cx + cy * ${clusterCountX} + cz * ${clusterCountX} * ${clusterCountY};
-    let lightCount = clusterSet.clusters[clusterIdx].numLights;
+    let cluster = clusterSet.clusters[clusterIdx];
+    let lightCount = cluster.numLights;
 
-    return vec4f(
-        f32(lightCount) / f32(${maxLightsPerCluster}),
-        f32(lightCount) / f32(${maxLightsPerCluster}),
-        f32(lightCount) / f32(${maxLightsPerCluster}),
-        1
-    );
+    // Taken from naive rendering code
+    let diffuseColor = textureSample(diffuseTex, diffuseTexSampler, in.uv);
+    if (diffuseColor.a < 0.5f) {
+        discard;
+    }
+
+    var totalLightContrib = vec3f(0, 0, 0);
+    for (var i = 0u; i < lightCount; i++) {
+        let light = lightSet.lights[cluster.lightIndices[i]];
+        totalLightContrib += calculateLightContrib(light, in.pos, normalize(in.nor));
+    }
+
+    var finalColor = diffuseColor.rgb * totalLightContrib;
+    return vec4(finalColor, 1);
 }
