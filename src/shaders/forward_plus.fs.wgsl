@@ -15,7 +15,6 @@
 // Multiply the fragment’s diffuse color by the accumulated light contribution.
 // Return the final color, ensuring that the alpha component is set appropriately (typically to 1).
 
-// Temporary debug
 @group(${bindGroup_scene}) @binding(0) var<uniform> cameraUniforms: CameraUniforms;
 @group(${bindGroup_scene}) @binding(1) var<storage, read> lightSet: LightSet;
 @group(${bindGroup_scene}) @binding(2) var<storage, read> clusterSet: ClusterSet;
