@@ -1,6 +1,4 @@
-// TODO-3: implement the Clustered Deferred fullscreen vertex shader
-
-// This shader should be very simple as it does not need all of the information passed by the the naive vertex shader.
+// Runs a hard coded fullscreen quad when asked to draw 6 vertices
 
 @vertex
 fn main(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {

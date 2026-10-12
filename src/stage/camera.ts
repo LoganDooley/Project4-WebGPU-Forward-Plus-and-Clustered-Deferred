@@ -12,7 +12,6 @@ class CameraUniforms {
         }
     }
 
-    // TODO-2: add extra functions to set values needed for light clustering here
     set viewMat(mat: Float32Array) {
         for (let i = 0; i < 16; i++) {
             this.floatView[16 + i] = mat[i];
@@ -160,7 +159,6 @@ export class Camera {
         const viewProjMat = mat4.mul(this.projMat, viewMat);
         this.uniforms.viewProjMat = viewProjMat;
 
-        // TODO-2: write to extra buffers needed for light clustering here
         this.uniforms.viewMat = viewMat;
 
         device.queue.writeBuffer(this.uniformsBuffer, 0, this.uniforms.buffer);
