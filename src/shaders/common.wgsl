@@ -41,3 +41,20 @@ fn calculateLightContrib(light: Light, posWorld: vec3f, nor: vec3f) -> vec3f {
     let lambert = max(dot(nor, normalize(vecToLight)), 0.f);
     return light.color * lambert * rangeAttenuation(distToLight);
 }
+
+fn getClusterIndex(fragPosXY: vec2f, viewZ: f32, cameraUniforms: CameraUniforms) -> u32 {
+    let uv = fragPosXY / cameraUniforms.screenSize;
+
+    // Debug for clusters
+    let xSlice = floor(uv.x * ${clusterCountX});
+    let ySlice = floor(uv.y * ${clusterCountY});
+
+    // z slicing from https://www.aortiz.me/2018/12/21/CG.html#part-2
+    let logFarNear = log(cameraUniforms.far / cameraUniforms.near);
+    let zSlice = floor(log(viewZ) * ${clusterCountZ} / logFarNear - ${clusterCountZ} * log(cameraUniforms.near) / logFarNear);
+    let cx = u32(clamp(xSlice, 0.0, f32(${clusterCountX} - 1)));
+    let cy = u32(clamp(ySlice, 0.0, f32(${clusterCountY} - 1)));
+    let cz = u32(clamp(zSlice, 0.0, f32(${clusterCountZ} - 1)));
+
+    return cx + cy * ${clusterCountX} + cz * ${clusterCountX} * ${clusterCountY};
+}
