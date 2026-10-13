@@ -24,6 +24,25 @@ const stats = new Stats();
 stats.showPanel(0);
 document.body.appendChild(stats.dom);
 
+// Adding a custom ms per frame counter using exponential moving average
+const avgMsPerFramePanel = stats.addPanel(new Stats.Panel('avg MS', '#ff8', '#221'));
+stats.showPanel(stats.dom.children.length - 1); // Show avgMsPerFramePanel by default
+
+const alpha = 0.05;
+let avgMsPerFrame = 0;
+let lastTime = performance.now();
+
+function updateAvgMsPerFrame(now: number) {
+    const currMsPerFrame = now - lastTime;
+    lastTime = now;
+
+    avgMsPerFrame = avgMsPerFrame === 0 ? currMsPerFrame : avgMsPerFrame + alpha * (currMsPerFrame - avgMsPerFrame);
+    avgMsPerFramePanel.update(avgMsPerFrame, 100);
+    
+    requestAnimationFrame(updateAvgMsPerFrame);
+}
+requestAnimationFrame(updateAvgMsPerFrame);
+
 const gui = new GUI();
 gui.add(lights, 'numLights').min(1).max(Lights.maxNumLights).step(1).onChange(() => {
     lights.updateLightSetUniformNumLights();
