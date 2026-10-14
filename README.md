@@ -13,9 +13,10 @@ WebGPU Forward+ and Clustered Deferred Shading
 
 [![Live Demo Thumbnail](img/LiveDemoThumbnail.png)](https://logandooley.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred/)
 
-### Demo Video/GIF
+### Demo GIF
 
-[![](img/video.mp4)](TODO)
+![Clustered Deferred 2000 Lights](img/2000lights_clustereddeferred.gif)
+*Clustered Deferred, 2000 Moving Point Lights*
 
 ## Table of Contents
 
