@@ -101,6 +101,17 @@ Without any optimizations, I used the following G-Buffer formats:
 
 For a total of 36.29 MB
 
+#### G-Buffer Visualization
+
+![G-Buffer WorldPos](img/Deferred_WorldPos.gif)
+*G-Buffer WorldPos under the equation $abs(worldPos)/10$*
+
+![G-Buffer Normal](img/Deferred_Normal.gif)
+*G-Buffer Normal under the equation $abs(normal)$*
+
+![G-Buffer Albedo](img/Deferred_Albedo.gif)
+*G-Buffer Albedo*
+
 ## Performance Analysis
 
 ### Test Setup
