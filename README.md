@@ -66,6 +66,10 @@ I used a maximum number of lights per cluster of 256. Since the cluster struct s
 
 Lights are assigned to clusters by a compute shader with one thread per cluster that runs prior to the render passes. For each cluster, the screen position and depth range is converted into view space using the camera's invProjMat to form an AABB. This AABB is then checked against each light in the scene via a Sphere-AABB test to determine if the light could contribute to any fragment in that cluster. Lights are added until either there are no more lights, or if the max cap of 256 lights per cluster is reached.
 
+#### Clustering Visualization
+![ClusterHeatmap](img/ClusterHeatmap.gif)
+*Heatmap of number of lights per fragment. White: >= 256 lights, Black: = 0 lights*
+
 ### Clustered Deferred
 A clustered deferred renderer acts similarly to a forward+ renderer, except it does its shading in a deferred manner, only shading each pixel on screen a single time. The rough outline is:
 - Split the view space into clusters
