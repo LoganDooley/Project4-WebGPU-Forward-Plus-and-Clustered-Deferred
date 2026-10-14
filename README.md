@@ -140,6 +140,10 @@ For clustered deferred, the biggest benefit is that the fragment shading time is
 
 #### Reason for performance differences?
 
+### Misc. Optimizations
+
+#### Pointer vs. Copy
+
 
 ## Credits
 - [Cluster Slicing](https://www.aortiz.me/2018/12/21/CG.html#part-2)
