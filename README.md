@@ -9,7 +9,9 @@ WebGPU Forward+ and Clustered Deferred Shading
 
 ### Live Demo
 
-[![](img/LiveDemoThumbnail.png)](https://logandooley.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred/)
+**[Open the live demo here](https://logandooley.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred/)** (requires a WebGPU-capable browser such as Chrome)
+
+[![Live Demo Thumbnail](img/LiveDemoThumbnail.png)](https://logandooley.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred/)
 
 ### Demo Video/GIF
 
@@ -160,7 +162,7 @@ For a total of 36.29 MB
 
 ### Test Setup
 - Resolution: 1920 x 945
-- VSync: On (Monitor: 240 Hz)
+- VSync: On (Monitor: 240 Hz). This does not affect profiling given the use of timestamp queries to profile actual GPU time.
 - Camera Position: Default starting view
 - Sampling: Frame time in MS. Taken using timestamp queries in WebGPU. First 20 frames are taken as warmup, and the next 100 are taken as actual frames to be sampled, of which the average is returned. This only includes the render passes GPU time.
 
@@ -193,6 +195,14 @@ For clustered deferred, the biggest benefit is that the fragment shading time is
 
 #### Reason for performance differences?
 From the performance tests, seeing the speedup of Clustered Deferred over Forward+ grow is likely due to primarily the reduced overdraw. With 5000 lights, most clusters are likely at maximum capacity in terms of lights per cluster, so the fragment shader is increasingly expensive as the number of lights increases. Only having to run the fragment shader once per final screen pixel in Clustered Deferred over for every fragment regardless of overdraw in Forward+ is likely the biggest reason for the improvement.
+
+From the following heatmaps, we can see that indeed the clusters do become saturated and quite similar at 4000 and 5000 lights in the scene:
+
+| Lights per Cluster @ 4000 Lights | Lights per Cluster @ 5000 Lights | 
+|:-:|:-:|
+| ![](img/heatmap_4000lights.png) | ![](img/heatmap_5000lights.png) |
+
+*Heatmap of number of lights per cluster. White: >= 256 lights, Black: = 0 lights*
 
 ### Misc. Optimizations
 
