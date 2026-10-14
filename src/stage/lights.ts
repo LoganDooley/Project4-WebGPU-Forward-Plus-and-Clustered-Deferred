@@ -3,6 +3,7 @@ import { device } from "../renderer";
 
 import * as shaders from '../shaders/shaders';
 import { Camera } from "./camera";
+import { gpuTimer } from '../gpu_timer';
 
 // h in [0, 1]
 function hueToRgb(h: number) {
@@ -194,7 +195,10 @@ export class Lights {
         // not using same encoder as render pass so this doesn't interfere with measuring actual rendering performance
         const encoder = device.createCommandEncoder();
 
-        const computePass = encoder.beginComputePass();
+        const computePass = encoder.beginComputePass({
+            label: "cluster compute pass",
+            timestampWrites: gpuTimer.begin(),
+        });
         computePass.setPipeline(this.moveLightsComputePipeline);
 
         computePass.setBindGroup(0, this.moveLightsComputeBindGroup);

@@ -1,6 +1,7 @@
 import * as renderer from '../renderer';
 import * as shaders from '../shaders/shaders';
 import { Stage } from '../stage/stage';
+import { gpuTimer } from '../gpu_timer';
 
 export class ClusteredDeferredRenderer extends renderer.Renderer {
     sceneUniformsBindGroupLayout: GPUBindGroupLayout;
@@ -262,6 +263,7 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
 
         const fullscreenRenderPass = encoder.beginRenderPass({
             label: "fullscreen render pass",
+            timestampWrites: gpuTimer.end(),
             colorAttachments: [
                 {
                     view: canvasTextureView,
@@ -278,6 +280,8 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
         fullscreenRenderPass.draw(6);
         fullscreenRenderPass.end();
 
+        gpuTimer.resolve(encoder);
         renderer.device.queue.submit([encoder.finish()]);
+        gpuTimer.read();
     }
 }

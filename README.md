@@ -38,6 +38,17 @@ The benefits of this method are that it is relatively simple to set up. There is
 
 However, for many lights, this nested loop can be a performance bottleneck especially when some lights are nowhere near a given fragment.
 
+| Number of Lights | Frame Time (ms) |
+|:-:|:-:|
+| 100 | 6.32 |
+| 250 | 16.02 |
+| 500 | 32.08 |
+| 1000 | 65.86 |
+| 2000 | 129.75 |
+| 3000 | 196.86 |
+| 4000 | 260.70 |
+| 5000 | 321.23 |
+
 ### Forward+
 A forward+ renderer is similar to Naive, except it considers only calculating light contributions for lights that are actually close to the fragments it is shading. The rough outline is:
 - Split the view space into clusters
@@ -55,6 +66,17 @@ The benefits of this method are that unlike Naive rendering, we do not blindly t
 The downsides are mainly in clustering overhead and overdraw. The clustering step is a whole extra shader pass that has to happen each frame prior to the normal rendering steps from the Naive method. In terms of overdraw, the issue with forward rendering in general is that the full lighting calculations will be done for a fragment, even if it is overwritten by a closer fragment from a closer mesh later in the loop.
 
 Another downside with both Forward+ and Clustered Deferred methods is that the clusters can only hold a fixed number of lights. Once the number of lights in a cluster surpasses this cap, there are visible seams in the render.
+
+| Number of Lights | Frame Time (ms) |
+|:-:|:-:|
+| 100 | 0.88 |
+| 250 | 1.60 |
+| 500 | 2.29 |
+| 1000 | 5.15 |
+| 2000 | 8.83 |
+| 3000 | 11.87 |
+| 4000 | 13.79 |
+| 5000 | 14.71 |
 
 #### Clustering Implementation Details
 For my implementation I used a fixed number of clusters in X, Y, and Z dimensions. In X and Y there are 16 and 9 clusters respectively, evenly distributed across the screen. In Z, there are 24 clusters, which are logarithmically distributed with depth. The equation I used for the logarithmic distribution comes from [this article](https://www.aortiz.me/2018/12/21/CG.html#part-2) and is as follows:
@@ -90,6 +112,17 @@ The benefits of this method are that unlike in Forward+, when a fragment is occl
 
 The downsides are that the addition of G-Buffers means there is extra memory cost, as well as deferred rendering not being able to handle transparency very well.
 
+| Number of Lights | Frame Time (ms) |
+|:-:|:-:|
+| 100 | 0.86 |
+| 250 | 0.94 |
+| 500 | 1.69 |
+| 1000 | 1.93 |
+| 2000 | 3.45 |
+| 3000 | 3.86 |
+| 4000 | 4.05 |
+| 5000 | 4.12 |
+
 #### G-Buffer Implementation Details
 Without any optimizations, I used the following G-Buffer formats:
 
@@ -118,13 +151,21 @@ For a total of 36.29 MB
 - Resolution: 1920 x 945
 - VSync: On (Monitor: 240 Hz)
 - Camera Position: Default starting view
-- Sampling: Frame time in MS, using exponential moving average with alpha = 0.05, read after settling
+- Sampling: Frame time in MS. Taken using timestamp queries in WebGPU. First 20 frames are taken as warmup, and the next 100 are taken as actual frames to be sampled, of which the average is returned. This only includes the render passes GPU time.
+
+![Frame Times](img/frame_time_comp.png)
 
 ### Forward+ vs. Clustered Deferred
 
+![Forward+ vs. Clustered Deferred](img/frame_time_comp_forward+_vs_cluster_deferred.png)
+*Ms per frame compared between Forward+ and Clustered Deferred for the Sponza scene w/ default camera view*
 
+![Forward+ vs. Clustered Deferred Speedup](img/cluster_deferred_speedup.png)
+*Frame time speedup of Clustered Deferred over Forward+ for the Sponza scene w/ default camera view*
 
 #### Is one faster?
+
+In all of the cases I tested for numbers of lights between 100 and 5000, clustered deferred was faster for all of them. The speedup of Clustered Deferred over Forward+ also increased with the number of lights, starting from being mostly identical, to a 3.56x speedup at 5000 lights over Forward+.
 
 #### Is one better at certain types of workloads?
 
@@ -139,6 +180,7 @@ For forward+, the biggest advantage over clustered deferred is its lack of a G-B
 For clustered deferred, the biggest benefit is that the fragment shading time is independent of the scene complexity, and is instead proportional to the screen size. The downside however is needing to use additional VRAM for the G-Buffers, as well as the implementation being a bit more complex, involving a G-Buffer pass prior to the actual shading pass. It also cannot handle transparency very well.
 
 #### Reason for performance differences?
+From the performance tests, seeing the speedup of Clustered Deferred over Forward+ grow is likely due to primarily the reduced overdraw. With 5000 lights, most clusters are likely at maximum capactiy in terms of lights per cluster, so the fragment shader is increasingly expensive as the number of lights increases. Only having to run the fragment shader once per final screen pixel in Clustered Deferred over for every fragment regardless of overdraw in Forward+ is likely the biggest reason for the improvement.
 
 ### Misc. Optimizations
 

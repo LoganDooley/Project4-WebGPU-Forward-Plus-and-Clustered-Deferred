@@ -41,7 +41,9 @@ export async function initWebGPU() {
         throw new Error("no appropriate GPUAdapter found");
     }
 
-    device = await adapter.requestDevice();
+    // If we can, enable timestamp queries
+    const canTimestamp = adapter.features.has('timestamp-query');
+    device = await adapter.requestDevice({ requiredFeatures: canTimestamp ? ['timestamp-query'] : [] });
 
     context = canvas.getContext("webgpu")!;
     canvasFormat = navigator.gpu.getPreferredCanvasFormat();

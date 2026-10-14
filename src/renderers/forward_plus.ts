@@ -1,6 +1,7 @@
 import * as renderer from '../renderer';
 import * as shaders from '../shaders/shaders';
 import { Stage } from '../stage/stage';
+import { gpuTimer } from '../gpu_timer';
 
 export class ForwardPlusRenderer extends renderer.Renderer {
     sceneUniformsBindGroupLayout: GPUBindGroupLayout;
@@ -104,6 +105,7 @@ export class ForwardPlusRenderer extends renderer.Renderer {
 
         const renderPass = encoder.beginRenderPass({
             label: "naive render pass",
+            timestampWrites: gpuTimer.end(),
             colorAttachments: [
                 {
                     view: canvasTextureView,
@@ -135,6 +137,8 @@ export class ForwardPlusRenderer extends renderer.Renderer {
 
         renderPass.end();
 
+        gpuTimer.resolve(encoder);
         renderer.device.queue.submit([encoder.finish()]);
+        gpuTimer.read();
     }
 }

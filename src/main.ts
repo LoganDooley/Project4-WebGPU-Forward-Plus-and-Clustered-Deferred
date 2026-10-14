@@ -10,9 +10,12 @@ import { setupLoaders, Scene } from './stage/scene';
 import { Lights } from './stage/lights';
 import { Camera } from './stage/camera';
 import { Stage } from './stage/stage';
+import { gpuTimer } from './gpu_timer';
 
 await initWebGPU();
 setupLoaders();
+
+gpuTimer.init();
 
 let scene = new Scene();
 await scene.loadGltf('./scenes/sponza/Sponza.gltf');
@@ -33,40 +36,33 @@ gui.add(lights, 'numLights').min(1).max(Lights.maxNumLights).step(1).onChange(()
 const benchmark = {
     avgMs: '',
     runBenchmark: () => {
-        const frameTimes: number[] = [];
-        let lastTime = performance.now();
-        let framesPassed = 0;
-
-        function tick(now: number) {
-            const currentFrameTime = now - lastTime;
-            lastTime = now;
-
-            if (framesPassed < 20){
-                // Skip the first 20 frames for a warmup
-                framesPassed++;
-                requestAnimationFrame(tick);
-                return;
-            }
-
-            frameTimes.push(currentFrameTime);
-
-            if (frameTimes.length < 100) {
-                requestAnimationFrame(tick);
-                return;
-            } 
-
-            // Compute the average frame time
-            var totalFrameTime = 0.0
-            for (const frameTime of frameTimes) {
-                totalFrameTime += frameTime;
-            }
-            const avgFrameTime = totalFrameTime / frameTimes.length;
-
-            // Store the result as a string
-            benchmark.avgMs = `${avgFrameTime.toFixed(2)}`;
+        if (!gpuTimer.enabled) {
+            benchmark.avgMs = 'timestamp queries disabled'; // Just show a message so we know
             resultGuiController.updateDisplay();
+            return;
         }
-        requestAnimationFrame(tick);
+         gpuTimer.frameTimes = [];
+
+    function tick() {
+        if (gpuTimer.frameTimes.length < 120) {
+            // 20 warm-up frames and 100 sampled frames
+            requestAnimationFrame(tick);
+            return;
+        }
+
+        // Compute the average frame time
+        var totalFrameTime = 0.0
+        for (let i = 20; i < 120; i++) {
+            // Ignore the first 20 warm up frames
+            totalFrameTime += gpuTimer.frameTimes[i];
+        }
+        const avgFrameTime = totalFrameTime / 100;
+
+        // Store the result as a string
+        benchmark.avgMs = `${avgFrameTime.toFixed(2)}`;
+        resultGuiController.updateDisplay();
+    }
+    requestAnimationFrame(tick);
     }
 };
 
