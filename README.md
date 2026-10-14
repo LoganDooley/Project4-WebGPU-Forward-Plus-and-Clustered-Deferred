@@ -105,6 +105,27 @@ For a total of 36.29 MB
 - Camera Position: Default starting view
 - Sampling: Frame time in MS, using exponential moving average with alpha = 0.05, read after settling
 
+### Forward+ vs. Clustered Deferred
+
+
+
+#### Is one faster?
+
+#### Is one better at certain types of workloads?
+
+Forward+ rendering is generally better for scenes with less overdraw and not as many lights, where the cost of adding a G-Buffer pass and additional memory is greater than re-computing the light calculations occasionally.
+
+Clustered Deferred rendering is generally better with scenes with lots of overdraw and many lights or complex fragment shaders. This is because the fragment shader will only run once per pixel in the final output image, reducing wasted cycles executing the expensive fragment shader on fragments that will be overdrawn by closer ones.
+
+#### Benefits and tradeoffs of using one vs. the other?
+
+For forward+, the biggest advantage over clustered deferred is its lack of a G-Buffer pass. This saves on VRAM as well as makes the implementation overall simpler. It can also handle transparency if the scene is rendered back to front, which deferred rendering cannot do. The downside is that it re-computes lighting for overdrawn fragments, which can waste time.
+
+For clustered deferred, the biggest benefit is that the fragment shading time is independent of the scene complexity, and is instead proportional to the screen size. The downside however is needing to use additional VRAM for the G-Buffers, as well as the implementation being a bit more complex, involving a G-Buffer pass prior to the actual shading pass. It also cannot handle transparency very well.
+
+#### Reason for performance differences?
+
+
 ## Credits
 - [Cluster Slicing](https://www.aortiz.me/2018/12/21/CG.html#part-2)
 - [Vite](https://vitejs.dev/)
