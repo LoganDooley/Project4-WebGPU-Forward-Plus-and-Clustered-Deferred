@@ -20,9 +20,20 @@ WebGPU Forward+ and Clustered Deferred Shading
 * [Renderers](#renderers)
   * [Naive](#naive)
   * [Forward+](#forward)
+    * [Clustering Implementation Details](#clustering-implementation-details)
+    * [Clustering Visualization](#clustering-visualization)
   * [Clustered Deferred](#clustered-deferred)
+    * [G-Buffer Implementation Details](#g-buffer-implementation-details)
+    * [G-Buffer Visualization](#g-buffer-visualization)
 * [Performance Analysis](#performance-analysis)
   * [Test Setup](#test-setup)
+  * [Forward+ vs. Clustered Deferred](#forward-vs-clustered-deferred)
+    * [Is one faster?](#is-one-faster)
+    * [Is one better at certain types of workloads?](#is-one-better-at-certain-types-of-workloads)
+    * [Benefits and tradeoffs of using one vs. the other?](#benefits-and-tradeoffs-of-using-one-vs-the-other)
+    * [Reason for performance differences?](#reason-for-performance-differences)
+  * [Misc. Optimizations](#misc-optimizations)
+    * [Pointer vs. Copy](#pointer-vs-copy)
 * [Credits](#credits)
 
 ## Renderers
@@ -186,7 +197,12 @@ From the performance tests, seeing the speedup of Clustered Deferred over Forwar
 ### Misc. Optimizations
 
 #### Pointer vs. Copy
+One fundamental optimization I made was accessing light indices in the clusters by pointer as opposed to copying the entire cluster into the fragment shader. Prior to making this change, this is the comparison of the frame times before and after:
 
+![Cluster Copy vs. Pointer](img/cluster_copy_vs_pointer.png)
+*Forward+ ms per frame for Sponza, default camera view w/ Copy vs. w/ Pointer*
+
+As it is shown, the copy version roughly adds a constant 30 ms to the frame time. This makes sense that the additional time does not scale with light count since we are copying the same amount of data regardless of if there are 0 lights in the cluster or 256.
 
 ## Credits
 - [Cluster Slicing](https://www.aortiz.me/2018/12/21/CG.html#part-2)
