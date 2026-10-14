@@ -18,6 +18,20 @@ WebGPU Forward+ and Clustered Deferred Shading
 ![Clustered Deferred 2000 Lights](img/2000lights_clustereddeferred.gif)
 *Clustered Deferred, 2000 Moving Point Lights*
 
+## Overview
+This project is a realtime WebGPU-based application which renders the Sponza scene with thousands of moving point lights. It compares implementations of Naive, Forward+, and Clustered Deferred rendering methods. At 5000 point lights, Clustered Deferred is roughly 78x faster than the Naive approach, and 3.57x faster than Forward+.
+
+### Features
+- **Naive Renderer:** Every fragment loops over every light
+- **Forward+ Renderer:** 
+  - 16 x 9 x 24 light clusters using logarithmic depth slicing
+  - Compute shader assigns lights to clusters using sphere-AABB test
+  - Fragments shade only based on lights in their cluster
+- **Clustered Deferred Renderer:** 
+  - G-buffer pass to record position, normal, and albedo
+  - Fullscreen lighting pass only shading fragments based on lights in their cluster, each screen pixel is only shaded once
+- **Benchmark Tool:** WebGPU timestamp query-based benchmark tool with an in-app "Run Benchmark" button
+
 ## Table of Contents
 
 * [Renderers](#renderers)
