@@ -50,24 +50,25 @@ const benchmark = {
         gpuTimer.reset();
         cpuTimer.reset();
 
-    function tick() {
-        // 20 warm-up frames and 100 sampled frames
-        const gpuDone = !gpuTimer.enabled || gpuTimer.frameTimes.length >= 120;
-        const cpuDone = cpuTimer.frameTimes.length >= 120;
-        if (!gpuDone || !cpuDone) {
-            requestAnimationFrame(tick);
-            return;
-        }
+        function tick() {
+            // 20 warm-up frames and 100 sampled frames
+            const gpuDone = !gpuTimer.enabled || gpuTimer.frameTimes.length >= 120;
+            const cpuDone = cpuTimer.frameTimes.length >= 120;
+            if (!gpuDone || !cpuDone) {
+                // Keep ticking the benchmark until both the CPU and GPU timers are done
+                requestAnimationFrame(tick);
+                return;
+            }
 
-        // Store the results as strings
-        benchmark.gpuAvgMs = gpuTimer.enabled
-            ? `${averageFrameTime(gpuTimer.frameTimes).toFixed(2)}`
-            : 'timestamp queries disabled'; // Just show a message so we know
-        benchmark.cpuAvgMs = `${averageFrameTime(cpuTimer.frameTimes).toFixed(3)}`;
-        resultGuiController.updateDisplay();
-        cpuResultGuiController.updateDisplay();
-    }
-    requestAnimationFrame(tick);
+            // Store the cpu and gpu results as strings
+            benchmark.gpuAvgMs = gpuTimer.enabled
+                ? `${averageFrameTime(gpuTimer.frameTimes).toFixed(2)}`
+                : 'timestamp queries disabled'; // Just show a message so we know
+            benchmark.cpuAvgMs = `${averageFrameTime(cpuTimer.frameTimes).toFixed(3)}`;
+            resultGuiController.updateDisplay();
+            cpuResultGuiController.updateDisplay();
+        }
+        requestAnimationFrame(tick);
     }
 };
 

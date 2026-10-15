@@ -30,7 +30,8 @@ This project is a realtime WebGPU-based application which renders the Sponza sce
 - **Clustered Deferred Renderer:** 
   - G-buffer pass to record position, normal, and albedo
   - Fullscreen lighting pass only shading fragments based on lights in their cluster, each screen pixel is only shaded once
-- **Benchmark Tool:** WebGPU timestamp query-based benchmark tool with an in-app "Run Benchmark" button
+- **Render Bundles:** Scene draw commands are only recorded once on renderer construction and executed each frame, cutting CPU draw time by 1.74x - 2.68x
+- **Benchmark Tool:** In-app "Run Benchmark" button that reports average GPU time via WebGPU timestamp queries, as well as CPU time for draw calls
 
 ## Table of Contents
 
@@ -51,6 +52,7 @@ This project is a realtime WebGPU-based application which renders the Sponza sce
     * [Reason for performance differences?](#reason-for-performance-differences)
   * [Misc. Optimizations](#misc-optimizations)
     * [Pointer vs. Copy](#pointer-vs-copy)
+  * [Render Bundles](#render-bundles)
 * [Credits](#credits)
 
 ## Renderers
@@ -160,7 +162,7 @@ Without any optimizations, I used the following G-Buffer formats:
 | Normal | rgba16float | 8 | 14.52 MB |
 | Albedo | rgba8unorm | 4 | 7.258 MB |
 
-For a total of 36.29 MB
+For a total of 36.29 MB.
 
 #### G-Buffer Visualization
 
@@ -179,7 +181,8 @@ For a total of 36.29 MB
 - Resolution: 1920 x 945
 - VSync: On (Monitor: 240 Hz). This does not affect profiling given the use of timestamp queries to profile actual GPU time.
 - Camera Position: Default starting view
-- Sampling: Frame time in MS. Taken using timestamp queries in WebGPU. First 20 frames are taken as warmup, and the next 100 are taken as actual frames to be sampled, of which the average is returned. This only includes the render passes GPU time.
+- Sampling: Frame time in ms. Taken using timestamp queries in WebGPU. First 20 frames are taken as warmup, and the next 100 are taken as actual frames to be sampled, of which the average is returned. This only includes the render passes GPU time.
+  - **Note:** the [Render Bundles](#render-bundles) section instead measures CPU time spent in each renderer's `draw()` call, with the same warmup and sample counts.
 
 ![Frame Times](img/frame_time_comp.png)
 *Ms per frame compared between all 3 renderers for the Sponza scene w/ default camera view*
@@ -229,9 +232,56 @@ One fundamental optimization I made was accessing light indices in the clusters 
 
 As it is shown, the copy version roughly adds a constant 30 ms to the frame time. This makes sense that the additional time does not scale with light count since we are copying the same amount of data regardless of if there are 0 lights in the cluster or 256.
 
+### Render Bundles
+
+**Note on Performance Testing:**
+For this section, I had to switch computers, so these results were measured on a computer with the following specs:
+- Google Chrome 155.0.8059.41, Windows 11, 13th Gen Intel(R) Core(TM) i5-13420H (2.10 GHz), 16GB RAM, RTX 4050 Laptop
+
+Every frame, each renderer draws the full Sponza scene by writing the same list of commands:
+- For every node, material, and primitive
+    - set bind groups
+    - set vertex/index buffers
+    - issue a `drawIndexed`
+  
+However, none of these commands change from frame to frame. As a result, we can use `GPURenderBundle`s from WebGPU to record them once on construction, and execute them in one call in the `draw()` function via `executeBundles`. 
+
+For all three renderers, render bundles are used for the render pass involving scene geometry. The light clustering compute pass from forward+ and clustered deferred, and the fullscreen lighting pass from clustered deferred are not bundled. The `bUseRenderBundles` option in the GUI can be used to toggle the use of render bundles on and off.
+
+Render bundles reduce the CPU cost of encoding commands, not the GPU cost of executing them, so I expanded my benchmark tool to also measure the CPU time spent in each renderer's `draw()` call. I used the same 20 warmup frames + 100 sampled frames to do this benchmark.
+
+![Render Bundles Comparison](img/renderbundles_comparison.png)
+*CPU time spent in `draw()` with vs. without render bundles for Sponza, 100 lights, default camera view*
+
+| Renderer | Bundles Disabled (ms) | Bundles Enabled (ms) | Speedup |
+|:-:|:-:|:-:|:-:|
+| Naive | 0.228 | 0.085 | 2.68x |
+| Forward+ | 0.341 | 0.154 | 2.21x |
+| Clustered Deferred | 1.131 | 0.651 | 1.74x |
+
+Render bundles reduced CPU draw time in every renderer, with speedups ranging from 1.74x in Clustered Deferred to 2.68x in Naive. Naive sees the largest relative speedup since nearly all of its CPU work is encoding the scene geometry, which is exactly what the bundle replaces. Forward+ and Clustered Deferred also encode passes that aren't bundled as mentioned before, so a smaller portion of their CPU time is optimized by render bundles compared to the naive renderer, hence the smaller speedup.
+
+The absolute savings are fairly small, likely because Sponza only has a moderate number of draw calls. The benefit of render bundles grows with the number of draw calls, so more complex scenes might see bigger savings.
+
+#### Best and Worst Case
+The best case for render bundles is a CPU-bound frame with many static draw calls, since the encoding cost that bundles remove scales with the number of draw calls.
+
+The worst case is a scene with few draw calls, or a GPU-bound frame. Since the GPU executes the same commands either way, if the GPU is the bottleneck then saving CPU time via render bundles won't improve the frame rate. In this project, the CPU is not the bottleneck, so render bundles don't have a huge impact on performance. Render bundles would also perform poorly in a very dynamic scene, since the bundle would have to be re-recorded every time the set of draw calls changes.
+
+#### Tradeoffs
+The main tradeoff is that the list of draw calls is fixed once recorded, so if the scene changes in ways that affect the draw calls, the render bundles have to be re-recorded, which reduces their benefit.
+
+#### Effect of Parameters
+The number of lights does not affect render bundle performance gains. The bundle only contains the scene geometry draw calls, which are the same regardless of how many lights are in the scene.
+
+The parameter that actually matters is the number of draw calls in the scene, which is fixed for this project using the Sponza scene. With more meshes, the CPU cost of encoding each frame without bundles would grow, while executing the bundle stays a single call, meaning the overall speedup would be greater.
+
+**Debug Views:** There are no debug views for render bundles, since they don't change the rendered output.
+
 ## Credits
 - [Cluster Slicing](https://www.aortiz.me/2018/12/21/CG.html#part-2)
 - [WebGPU Timestamp Queries Tutorial](https://webgpufundamentals.org/webgpu/lessons/webgpu-timing.html)
+- [WebGPU Render Bundle Best Practices](https://toji.dev/webgpu-best-practices/render-bundles.html)
 - [Vite](https://vitejs.dev/)
 - [loaders.gl](https://loaders.gl/)
 - [dat.GUI](https://github.com/dataarts/dat.gui)
