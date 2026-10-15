@@ -11,6 +11,7 @@ import { Lights } from './stage/lights';
 import { Camera } from './stage/camera';
 import { Stage } from './stage/stage';
 import { gpuTimer } from './gpu_timer';
+import { cpuTimer } from './cpu_timer';
 
 await initWebGPU();
 setupLoaders();
@@ -33,41 +34,46 @@ gui.add(lights, 'numLights').min(1).max(Lights.maxNumLights).step(1).onChange(()
 });
 
 // Add a gui button to run a simple benchmark
+// Average frame time over 100 sampled frames, ignoring the first 20 warm-up frames
+function averageFrameTime(frameTimes: number[]) {
+    var totalFrameTime = 0.0
+    for (let i = 20; i < 120; i++) {
+        totalFrameTime += frameTimes[i];
+    }
+    return totalFrameTime / 100;
+}
+
 const benchmark = {
-    avgMs: '',
+    gpuAvgMs: '',
+    cpuAvgMs: '',
     runBenchmark: () => {
-        if (!gpuTimer.enabled) {
-            benchmark.avgMs = 'timestamp queries disabled'; // Just show a message so we know
-            resultGuiController.updateDisplay();
-            return;
-        }
-         gpuTimer.frameTimes = [];
+        gpuTimer.reset();
+        cpuTimer.reset();
 
     function tick() {
-        if (gpuTimer.frameTimes.length < 120) {
-            // 20 warm-up frames and 100 sampled frames
+        // 20 warm-up frames and 100 sampled frames
+        const gpuDone = !gpuTimer.enabled || gpuTimer.frameTimes.length >= 120;
+        const cpuDone = cpuTimer.frameTimes.length >= 120;
+        if (!gpuDone || !cpuDone) {
             requestAnimationFrame(tick);
             return;
         }
 
-        // Compute the average frame time
-        var totalFrameTime = 0.0
-        for (let i = 20; i < 120; i++) {
-            // Ignore the first 20 warm up frames
-            totalFrameTime += gpuTimer.frameTimes[i];
-        }
-        const avgFrameTime = totalFrameTime / 100;
-
-        // Store the result as a string
-        benchmark.avgMs = `${avgFrameTime.toFixed(2)}`;
+        // Store the results as strings
+        benchmark.gpuAvgMs = gpuTimer.enabled
+            ? `${averageFrameTime(gpuTimer.frameTimes).toFixed(2)}`
+            : 'timestamp queries disabled'; // Just show a message so we know
+        benchmark.cpuAvgMs = `${averageFrameTime(cpuTimer.frameTimes).toFixed(3)}`;
         resultGuiController.updateDisplay();
+        cpuResultGuiController.updateDisplay();
     }
     requestAnimationFrame(tick);
     }
 };
 
 gui.add(benchmark, 'runBenchmark').name('Run Benchmark'); // Add a benchmark button to the gui
-const resultGuiController = gui.add(benchmark, 'avgMs').name('Avg ms:'); // Add the benchmark result to the gui
+const resultGuiController = gui.add(benchmark, 'gpuAvgMs').name('GPU avg ms:'); // Add the benchmark result to the gui
+const cpuResultGuiController = gui.add(benchmark, 'cpuAvgMs').name('CPU draw avg ms:');
 
 const stage = new Stage(scene, lights, camera, stats);
 

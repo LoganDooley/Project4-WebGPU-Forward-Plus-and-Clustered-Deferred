@@ -96,5 +96,8 @@ export const gpuTimer = {
         if (ms > 0) {
             this.frameTimes.push(ms);
         }
+    },
+    reset() {
+        this.frameTimes = [];
     }
 };

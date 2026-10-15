@@ -2,6 +2,7 @@ import { Scene } from './stage/scene';
 import { Lights } from './stage/lights';
 import { Camera } from './stage/camera';
 import { Stage } from './stage/stage';
+import { cpuTimer } from './cpu_timer';
 
 export var canvas: HTMLCanvasElement;
 export var canvasFormat: GPUTextureFormat;
@@ -151,9 +152,11 @@ export abstract class Renderer {
         this.lights.onFrame(time);
 
         this.stats.begin();
+        cpuTimer.begin();
 
         this.draw();
 
+        cpuTimer.end();
         this.stats.end();
 
         this.prevTime = time;
