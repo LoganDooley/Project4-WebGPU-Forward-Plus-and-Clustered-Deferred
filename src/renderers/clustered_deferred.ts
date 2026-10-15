@@ -2,6 +2,7 @@ import * as renderer from '../renderer';
 import * as shaders from '../shaders/shaders';
 import { Stage } from '../stage/stage';
 import { gpuTimer } from '../gpu_timer';
+import { RenderSettings } from '../renderer';
 
 export class ClusteredDeferredRenderer extends renderer.Renderer {
     sceneUniformsBindGroupLayout: GPUBindGroupLayout;
@@ -26,8 +27,11 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
 
     fullscreenPipeline: GPURenderPipeline;
 
-    constructor(stage: Stage) {
-        super(stage);
+    renderBundleEncoder: GPURenderBundleEncoder;
+    renderBundle: GPURenderBundle;
+
+    constructor(stage: Stage, settings: RenderSettings) {
+        super(stage, settings);
 
         this.sceneUniformsBindGroupLayout = renderer.device.createBindGroupLayout({
             label: "scene uniforms bind group layout",
@@ -203,6 +207,36 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
                 ]
             }
         });
+        
+        this.renderBundleEncoder = renderer.device.createRenderBundleEncoder({
+            label: "clustered deferred render bundle encoder",
+            colorFormats: [
+                this.positionTexture.format,
+                this.normalTexture.format,
+                this.albedoTexture.format
+            ],
+            depthStencilFormat: this.depthTexture.format
+        });
+
+        this.encodeRenderCommands(this.renderBundleEncoder);
+
+        this.renderBundle = this.renderBundleEncoder.finish();
+    }
+
+    private encodeRenderCommands(encoder: GPURenderPassEncoder | GPURenderBundleEncoder) {
+        encoder.setPipeline(this.gBufferPipeline);
+
+        encoder.setBindGroup(shaders.constants.bindGroup_scene, this.sceneUniformsBindGroup);
+
+        this.scene.iterate(node => {
+            encoder.setBindGroup(shaders.constants.bindGroup_model, node.modelBindGroup);
+        }, material => {
+            encoder.setBindGroup(shaders.constants.bindGroup_material, material.materialBindGroup);
+        }, primitive => {
+            encoder.setVertexBuffer(0, primitive.vertexBuffer);
+            encoder.setIndexBuffer(primitive.indexBuffer, 'uint32');
+            encoder.drawIndexed(primitive.numIndices);
+        });
     }
 
     override draw() {
@@ -242,19 +276,12 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
             }
         });
 
-        gBufferRenderPass.setPipeline(this.gBufferPipeline);
-
-        gBufferRenderPass.setBindGroup(shaders.constants.bindGroup_scene, this.sceneUniformsBindGroup);
-
-        this.scene.iterate(node => {
-            gBufferRenderPass.setBindGroup(shaders.constants.bindGroup_model, node.modelBindGroup);
-        }, material => {
-            gBufferRenderPass.setBindGroup(shaders.constants.bindGroup_material, material.materialBindGroup);
-        }, primitive => {
-            gBufferRenderPass.setVertexBuffer(0, primitive.vertexBuffer);
-            gBufferRenderPass.setIndexBuffer(primitive.indexBuffer, 'uint32');
-            gBufferRenderPass.drawIndexed(primitive.numIndices);
-        });
+        if(this.renderSettings.bUseRenderBundles){
+            gBufferRenderPass.executeBundles([this.renderBundle]);
+        }
+        else{
+            this.encodeRenderCommands(gBufferRenderPass);
+        }
 
         gBufferRenderPass.end();
 

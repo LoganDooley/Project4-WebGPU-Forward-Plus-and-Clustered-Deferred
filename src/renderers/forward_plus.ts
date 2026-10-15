@@ -2,6 +2,7 @@ import * as renderer from '../renderer';
 import * as shaders from '../shaders/shaders';
 import { Stage } from '../stage/stage';
 import { gpuTimer } from '../gpu_timer';
+import { RenderSettings } from '../renderer';
 
 export class ForwardPlusRenderer extends renderer.Renderer {
     sceneUniformsBindGroupLayout: GPUBindGroupLayout;
@@ -12,8 +13,11 @@ export class ForwardPlusRenderer extends renderer.Renderer {
 
     pipeline: GPURenderPipeline;
 
-    constructor(stage: Stage) {
-        super(stage);
+    renderBundleEncoder: GPURenderBundleEncoder;
+    renderBundle: GPURenderBundle;
+
+    constructor(stage: Stage, settings: RenderSettings) {
+        super(stage, settings);
 
         this.sceneUniformsBindGroupLayout = renderer.device.createBindGroupLayout({
             label: "scene uniforms bind group layout",
@@ -95,6 +99,34 @@ export class ForwardPlusRenderer extends renderer.Renderer {
                 ]
             }
         });
+
+        this.renderBundleEncoder = renderer.device.createRenderBundleEncoder({
+            label: "forward+ render bundle encoder",
+            colorFormats: [renderer.canvasFormat],
+            depthReadOnly: false,
+            stencilReadOnly: false,
+            depthStencilFormat: "depth24plus"
+        });
+
+        this.encodeRenderCommands(this.renderBundleEncoder);
+
+        this.renderBundle = this.renderBundleEncoder.finish();
+    }
+
+    private encodeRenderCommands(encoder: GPURenderPassEncoder | GPURenderBundleEncoder) {
+        encoder.setPipeline(this.pipeline);
+
+        encoder.setBindGroup(shaders.constants.bindGroup_scene, this.sceneUniformsBindGroup);
+
+        this.scene.iterate(node => {
+            encoder.setBindGroup(shaders.constants.bindGroup_model, node.modelBindGroup);
+        }, material => {
+            encoder.setBindGroup(shaders.constants.bindGroup_material, material.materialBindGroup);
+        }, primitive => {
+            encoder.setVertexBuffer(0, primitive.vertexBuffer);
+            encoder.setIndexBuffer(primitive.indexBuffer, 'uint32');
+            encoder.drawIndexed(primitive.numIndices);
+        });
     }
 
     override draw() {
@@ -121,20 +153,14 @@ export class ForwardPlusRenderer extends renderer.Renderer {
                 depthStoreOp: "store"
             }
         });
-        renderPass.setPipeline(this.pipeline);
 
-        renderPass.setBindGroup(shaders.constants.bindGroup_scene, this.sceneUniformsBindGroup);
-
-        this.scene.iterate(node => {
-            renderPass.setBindGroup(shaders.constants.bindGroup_model, node.modelBindGroup);
-        }, material => {
-            renderPass.setBindGroup(shaders.constants.bindGroup_material, material.materialBindGroup);
-        }, primitive => {
-            renderPass.setVertexBuffer(0, primitive.vertexBuffer);
-            renderPass.setIndexBuffer(primitive.indexBuffer, 'uint32');
-            renderPass.drawIndexed(primitive.numIndices);
-        });
-
+        if(this.renderSettings.bUseRenderBundles){
+            renderPass.executeBundles([this.renderBundle]);
+        }
+        else{
+            this.encodeRenderCommands(renderPass);
+        }
+        
         renderPass.end();
 
         gpuTimer.resolve(encoder);

@@ -15,6 +15,10 @@ export const fovYDegrees = 45;
 export var modelBindGroupLayout: GPUBindGroupLayout;
 export var materialBindGroupLayout: GPUBindGroupLayout;
 
+export type RenderSettings = {
+    bUseRenderBundles: boolean;
+}
+
 // CHECKITOUT: this function initializes WebGPU and also creates some bind group layouts shared by all the renderers
 export async function initWebGPU() {
     canvas = document.getElementById("mainCanvas") as HTMLCanvasElement;
@@ -113,17 +117,25 @@ export abstract class Renderer {
     private prevTime: number = 0;
     private frameRequestId: number;
 
-    constructor(stage: Stage) {
+    protected renderSettings: RenderSettings;
+
+    constructor(stage: Stage, settings: RenderSettings) {
         this.scene = stage.scene;
         this.lights = stage.lights;
         this.camera = stage.camera;
         this.stats = stage.stats;
 
         this.frameRequestId = requestAnimationFrame((t) => this.onFrame(t));
+
+        this.renderSettings = settings;
     }
 
     stop(): void {
         cancelAnimationFrame(this.frameRequestId);
+    }
+
+    setRenderSettings(settings: RenderSettings) {
+        this.renderSettings = settings;
     }
 
     protected abstract draw(): void;

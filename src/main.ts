@@ -1,7 +1,7 @@
 import Stats from 'stats.js';
 import { GUI } from 'dat.gui';
 
-import { initWebGPU, Renderer } from './renderer';
+import { initWebGPU, Renderer, RenderSettings } from './renderer';
 import { NaiveRenderer } from './renderers/naive';
 import { ForwardPlusRenderer } from './renderers/forward_plus';
 import { ClusteredDeferredRenderer } from './renderers/clustered_deferred';
@@ -73,18 +73,23 @@ const stage = new Stage(scene, lights, camera, stats);
 
 var renderer: Renderer | undefined;
 
+// Settings visible to the GUI
+const settings : RenderSettings = {
+    bUseRenderBundles: true
+};
+
 function setRenderer(mode: string) {
     renderer?.stop();
 
     switch (mode) {
         case renderModes.naive:
-            renderer = new NaiveRenderer(stage);
+            renderer = new NaiveRenderer(stage, settings);
             break;
         case renderModes.forwardPlus:
-            renderer = new ForwardPlusRenderer(stage);
+            renderer = new ForwardPlusRenderer(stage, settings);
             break;
         case renderModes.clusteredDeferred:
-            renderer = new ClusteredDeferredRenderer(stage);
+            renderer = new ClusteredDeferredRenderer(stage, settings);
             break;
     }
 }
@@ -94,3 +99,14 @@ let renderModeController = gui.add({ mode: renderModes.naive }, 'mode', renderMo
 renderModeController.onChange(setRenderer);
 
 setRenderer(renderModeController.getValue());
+
+function updateRenderSettings(){
+    if(renderer){
+        renderer.setRenderSettings(settings);
+    }
+}
+
+let renderBundleController = gui.add(settings, "bUseRenderBundles");
+renderBundleController.onChange(updateRenderSettings);
+
+updateRenderSettings();
