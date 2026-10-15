@@ -17,15 +17,6 @@ struct GBufferOutput {
     @location(2) albedo: vec4f
 }
 
-fn encodeNormal(n_in: vec3f) -> vec2f {
-    var n = n_in;
-    n /= (abs(n.x) + abs(n.y) + abs(n.z));
-    if (n.z < 0.0) {
-        n = vec3f((1.0 - abs(vec2f(n.y, n.x))) * sign(n.xy), n.z);
-    }
-    return n.xy * 0.5 + 0.5;
-}
-
 @fragment
 fn main(in: FragmentInput) -> GBufferOutput {
     let diffuseColor = textureSample(diffuseTex, diffuseTexSampler, in.uv);
@@ -33,6 +24,5 @@ fn main(in: FragmentInput) -> GBufferOutput {
         discard;
     }
     
-    //return GBufferOutput(vec4f(in.pos, 1.0), vec4f(normalize(in.nor), 0.0), diffuseColor);
-    return GBufferOutput(vec4f(in.pos, 1.0), vec4f(encodeNormal(in.nor), 0.0, 0.0), diffuseColor);
+    return GBufferOutput(vec4f(in.pos, 1.0), vec4f(normalize(in.nor), 0.0), diffuseColor);
 }
