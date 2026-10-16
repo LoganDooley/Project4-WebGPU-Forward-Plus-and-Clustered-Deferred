@@ -18,6 +18,10 @@ WebGPU Forward+ and Clustered Deferred Shading
 ![Clustered Deferred 2000 Lights](img/2000lights_clustereddeferred.gif)
 *Clustered Deferred, 2000 Moving Point Lights*
 
+### Demo Video
+
+[![Demo Video Thumbnail](https://img.youtube.com/vi/w1P2WaS4Y3Y/maxresdefault.jpg)](https://youtu.be/w1P2WaS4Y3Y)
+
 ## Overview
 This project is a realtime WebGPU-based application which renders the Sponza scene with thousands of moving point lights. It compares implementations of Naive, Forward+, and Clustered Deferred rendering methods. At 5000 point lights, Clustered Deferred is roughly 78x faster than the Naive approach, and 3.57x faster than Forward+.
 
